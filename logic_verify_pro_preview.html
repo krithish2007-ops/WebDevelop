@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LogicVerify Pro | De Morgan Simulator</title>
+
+<style>
+:root{
+    --bg:#0f172a;
+    --card:#1e293b;
+    --accent:#38bdf8;
+    --success:#22c55e;
+    --danger:#ef4444;
+    --text:#f1f5f9;
+    --border:#334155;
+}
+
+body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:Inter,system-ui,sans-serif;
+    margin:0;
+    padding:20px;
+    display:flex;
+    justify-content:center;
+}
+
+.container{max-width:900px;width:100%}
+header{text-align:center;margin-bottom:30px}
+
+.lab-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+}
+@media(max-width:768px){.lab-grid{grid-template-columns:1fr}}
+
+.gate-card{
+    background:var(--card);
+    padding:20px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    text-align:center;
+}
+
+.input-controls{
+    display:flex;
+    justify-content:center;
+    gap:15px;
+    margin-top:15px;
+}
+
+button{
+    padding:10px 20px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:600;
+}
+
+.btn-toggle{background:#475569;color:white}
+.btn-toggle.active{
+    background:var(--accent);
+    color:#000;
+    box-shadow:0 0 15px var(--accent);
+}
+
+select{
+    width:100%;
+    padding:10px;
+    margin-bottom:15px;
+    background:#020617;
+    color:white;
+    border:1px solid var(--border);
+    border-radius:6px;
+}
+
+.visual-area{
+    height:120px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    font-size:3rem;
+}
+
+.bulb{filter:grayscale(1) opacity(0.3);transition:0.4s}
+.bulb.on{
+    filter:none;
+    text-shadow:0 0 30px gold;
+    animation:pulse 1.5s infinite;
+}
+@keyframes pulse{
+    0%,100%{text-shadow:0 0 20px gold}
+    50%{text-shadow:0 0 40px gold}
+}
+
+.formula{font-family:monospace;color:var(--accent);font-size:1.1rem;margin-top:8px}
+
+.truth-table{width:100%;border-collapse:collapse;margin-top:15px;font-size:0.85rem}
+.truth-table th{border-bottom:2px solid var(--border);padding:6px;color:var(--accent)}
+.truth-table td{padding:6px;border-bottom:1px solid var(--border)}
+
+.active-row{background:rgba(34,197,94,0.2);color:var(--success);font-weight:bold}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+<h1>LogicVerify Pro</h1>
+<p>Interactive De Morgan’s Law & Boolean Logic Simulator</p>
+
+<div class="input-controls">
+<button id="masterA" class="btn-toggle">A: 0</button>
+<button id="masterB" class="btn-toggle">B: 0</button>
+</div>
+</header>
+
+<div class="lab-grid">
+
+<div class="gate-card">
+<h3>Circuit 1</h3>
+<select id="gate1">
+<option value="NAND">NAND : ¬(A·B)</option>
+<option value="NOR">NOR : ¬(A+B)</option>
+<option value="AND">AND : A·B</option>
+<option value="OR">OR : A+B</option>
+</select>
+
+<div class="visual-area">
+<div id="bulb1" class="bulb">💡</div>
+<div id="formula1" class="formula"></div>
+</div>
+
+<table class="truth-table">
+<thead><tr><th>A</th><th>B</th><th>OUT</th></tr></thead>
+<tbody id="table1"></tbody>
+</table>
+</div>
+
+<div class="gate-card">
+<h3>Circuit 2</h3>
+<select id="gate2">
+<option value="INV_OR">Ā + B̄</option>
+<option value="INV_AND">Ā · B̄</option>
+<option value="NOR">Ā(A + B)</option>
+<option value="XOR">A ⊕ B</option>
+<option value="CUSTOM">Custom Gate</option>
+</select>
+
+<input id="customExpr" placeholder="Example: (A & !B) | (!A & B)" style="width:100%;padding:8px;margin-top:10px;display:none;background:#020617;color:white;border:1px solid var(--border);border-radius:6px">
+
+<div class="visual-area">
+<div id="bulb2" class="bulb">💡</div>
+<div id="formula2" class="formula"></div>
+</div>
+
+<table class="truth-table">
+<thead><tr><th>A</th><th>B</th><th>OUT</th></tr></thead>
+<tbody id="table2"></tbody>
+</table>
+</div>
+
+</div>
+
+<div style="margin-top:30px;padding:20px;border-radius:8px;background:rgba(56,189,248,.1);text-align:center">
+<strong>Law Verification:</strong>
+<span id="match-status"></span>
+</div>
+
+</div>
+
+<script>
+// ---------- STATE ----------
+const inputs={A:0,B:0};
+
+const logic={
+AND:(a,b)=>a&b,
+OR:(a,b)=>a|b,
+NAND:(a,b)=>(a&b)?0:1,
+NOR:(a,b)=>(a|b)?0:1,
+XOR:(a,b)=>a^b,
+INV_OR:(a,b)=>(!a||!b)?1:0,
+INV_AND:(a,b)=>(!a&&!b)?1:0,
+CUSTOM:(a,b)=>{
+    try{
+        const expr=document.getElementById('customExpr').value;
+        if(!expr) return 0;
+        return Function('A','B',`return (${expr})?1:0;`)(a,b);
+    }catch{return 0;}
+}
+};
+
+const symbols={
+AND:"A · B",
+OR:"A + B",
+NAND:"¯(A · B)",
+NOR:"¯(A + B)",
+XOR:"A ⊕ B",
+INV_OR:"¯ A + ¯ B",
+INV_AND:"¯ A · ¯ B",
+CUSTOM:"User Defined"
+};
+
+// ---------- FUNCTIONS (GLOBAL SAFE) ----------
+function toggleInput(key){
+    inputs[key]^=1;
+    const btn=document.getElementById('master'+key);
+    btn.textContent=`${key}: ${inputs[key]}`;
+    btn.classList.toggle('active',inputs[key]===1);
+    update();
+}
+
+function update(){
+    const g1=document.getElementById('gate1').value;
+    const g2=document.getElementById('gate2').value;
+
+    const o1=logic[g1](inputs.A,inputs.B);
+    const o2=logic[g2](inputs.A,inputs.B);
+
+    document.getElementById('bulb1').className='bulb '+(o1?'on':'');
+    document.getElementById('bulb2').className='bulb '+(o2?'on':'');
+
+    document.getElementById('formula1').textContent=symbols[g1];
+    document.getElementById('formula2').textContent=symbols[g2];
+
+    renderTable('table1',g1);
+    renderTable('table2',g2);
+    verify(g1,g2);
+}
+
+function renderTable(id,gate){
+    const tbody=document.getElementById(id);
+    tbody.innerHTML='';
+    [[0,0],[0,1],[1,0],[1,1]].forEach(([a,b])=>{
+        const out=logic[gate](a,b);
+        const active=a===inputs.A && b===inputs.B ? 'active-row' : '';
+        tbody.innerHTML+=`
+        <tr class="${active}" data-a="${a}" data-b="${b}">
+            <td>${a}</td><td>${b}</td><td>${out}</td>
+        </tr>`;
+    });
+
+    // allow clicking rows to change inputs
+    tbody.querySelectorAll('tr').forEach(row=>{
+        row.addEventListener('click',()=>{
+            inputs.A=parseInt(row.dataset.a);
+            inputs.B=parseInt(row.dataset.b);
+            syncInputButtons();
+            update();
+        });
+    });
+}
+
+function syncInputButtons(){
+    const btnA=document.getElementById('masterA');
+    const btnB=document.getElementById('masterB');
+
+    btnA.textContent=`A: ${inputs.A}`;
+    btnB.textContent=`B: ${inputs.B}`;
+    btnA.classList.toggle('active',inputs.A===1);
+    btnB.classList.toggle('active',inputs.B===1);
+}
+
+function verify(g1,g2){
+    const same=[[0,0],[0,1],[1,0],[1,1]]
+        .every(([a,b])=>logic[g1](a,b)===logic[g2](a,b));
+
+    document.getElementById('match-status').innerHTML=same
+        ?'<span style="color:var(--success)">✅ Identical — De Morgan Verified</span>'
+        :'<span style="color:var(--danger)">❌ Not Equivalent</span>';
+}
+
+// ---------- EVENT BINDING ----------
+document.getElementById('masterA').addEventListener('click',()=>toggleInput('A'));
+document.getElementById('masterB').addEventListener('click',()=>toggleInput('B'));
+document.getElementById('gate1').addEventListener('change',update);
+document.getElementById('gate2').addEventListener('change',e=>{
+    const isCustom=e.target.value==='CUSTOM';
+    document.getElementById('customExpr').style.display=isCustom?'block':'none';
+    update();
+});
+
+// ---------- INIT ----------
+update();
+</script>
+</body>
+</html>
