@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>K-Map with Circuit Diagram</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+    background:#0f172a;
+    color:#f1f5f9;
+    font-family:system-ui;
+    display:flex;
+    justify-content:center;
+    padding:20px;
+}
+.container{max-width:900px;width:100%}
+h1{text-align:center}
+
+.panel{
+    background:#1e293b;
+    padding:20px;
+    border-radius:12px;
+    margin-bottom:20px;
+}
+
+button,input{
+    padding:8px 12px;
+    border-radius:6px;
+    border:none;
+    margin:5px;
+    font-weight:bold;
+}
+
+button{cursor:pointer;background:#38bdf8}
+input{width:120px}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    text-align:center;
+}
+th,td{
+    border:1px solid #334155;
+    padding:12px;
+}
+th{color:#38bdf8}
+.cell{
+    cursor:pointer;
+    background:#020617;
+}
+.cell.active{
+    background:rgba(34,197,94,.3);
+    color:#22c55e;
+    font-weight:bold;
+}
+
+.expr{
+    font-family:monospace;
+    font-size:1.2rem;
+    color:#38bdf8;
+    text-align:center;
+    margin-top:10px;
+}
+
+svg{
+    width:100%;
+    background:#020617;
+    border-radius:10px;
+    margin-top:15px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>K-Map Simplifier with Circuit</h1>
+
+<!-- INPUT PANEL -->
+<div class="panel">
+<strong>Enter Minterms (0–3):</strong><br>
+<input id="minterms" placeholder="e.g. 1,2">
+<button onclick="applyMinterms()">Apply</button>
+
+<br><br>
+<strong>Examples:</strong><br>
+<button onclick="loadExample([1,2])">XOR</button>
+<button onclick="loadExample([0,1])">Ā</button>
+<button onclick="loadExample([2,3])">A</button>
+<button onclick="loadExample([0,1,2,3])">Always 1</button>
+</div>
+
+<!-- KMAP -->
+<div class="panel">
+<h3>2-Variable K-Map</h3>
+<table>
+<tr>
+<th>A\B</th>
+<th>B̄</th>
+<th>B</th>
+</tr>
+<tr>
+<th>Ā</th>
+<td class="cell" data="00">0</td>
+<td class="cell" data="01">0</td>
+</tr>
+<tr>
+<th>A</th>
+<td class="cell" data="10">0</td>
+<td class="cell" data="11">0</td>
+</tr>
+</table>
+
+<div class="expr" id="expression">F = 0</div>
+</div>
+
+<!-- CIRCUIT -->
+<div class="panel">
+<h3>Circuit Diagram</h3>
+<svg viewBox="0 0 600 200" id="circuit">
+<text x="30" y="60">A</text>
+<line x1="50" y1="55" x2="120" y2="55" stroke="white" stroke-width="2"/>
+<text x="30" y="120">B</text>
+<line x1="50" y1="115" x2="120" y2="115" stroke="white" stroke-width="2"/>
+
+<rect x="120" y="40" width="120" height="100" rx="15" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+<text x="160" y="95" fill="#38bdf8">LOGIC</text>
+
+<line x1="240" y1="90" x2="320" y2="90" stroke="white" stroke-width="2"/>
+<circle cx="340" cy="90" r="10" fill="gold"/>
+<text x="360" y="95">F</text>
+</svg>
+</div>
+
+</div>
+
+<script>
+const map={"00":0,"01":0,"10":0,"11":0};
+
+document.querySelectorAll('.cell').forEach(c=>{
+    c.onclick=()=>{
+        map[c.getAttribute("data")]^=1;
+        refresh();
+    }
+});
+
+function applyMinterms(){
+    reset();
+    const mts=document.getElementById("minterms").value.split(",");
+    mts.forEach(m=>{
+        if(m>=0&&m<=3){
+            const bin=m.toString(2).padStart(2,"0");
+            map[bin]=1;
+        }
+    });
+    refresh();
+}
+
+function loadExample(arr){
+    reset();
+    arr.forEach(m=>{
+        map[m.toString(2).padStart(2,"0")]=1;
+    });
+    refresh();
+}
+
+function reset(){
+    Object.keys(map).forEach(k=>map[k]=0);
+}
+
+function refresh(){
+    document.querySelectorAll('.cell').forEach(c=>{
+        const k=c.getAttribute("data");
+        c.textContent=map[k];
+        c.classList.toggle("active",map[k]===1);
+    });
+    simplify();
+}
+
+function simplify(){
+    const ones=Object.keys(map).filter(k=>map[k]);
+    let exp="0";
+
+    if(ones.length===4) exp="1";
+    else if(ones.length){
+        exp=ones.map(k=>{
+            let t="";
+            t+=k[0]==="1"?"A":"Ā";
+            t+=k[1]==="1"?"B":"B̄";
+            return t;
+        }).join(" + ");
+    }
+    document.getElementById("expression").textContent="F = "+exp;
+}
+</script>
+
+</body>
+</html>
