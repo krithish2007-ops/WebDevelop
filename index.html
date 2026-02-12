@@ -2,70 +2,162 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Guess the Number</title>
+  <title>Five Wins Challenge – Impossible Mode</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #111827;
-      color: #f9fafb;
+      background: #0f172a;
+      color: #f8fafc;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
+      margin: 0;
     }
+
     .game {
-      background: #1f2933;
-      padding: 45px 39px;
-      border-radius: 55px;
+      background: #1e293b;
+      padding: 30px;
+      border-radius: 20px;
       text-align: center;
-      width: 300px;
+      width: 360px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
     }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
     input {
-      padding: 8px;
-      width: 80px;
+      padding: 10px;
+      width: 100px;
       text-align: center;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      font-size: 16px;
     }
+
     button {
-      padding: 8px 14px;
+      padding: 10px 16px;
       margin-left: 6px;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
+      font-size: 14px;
+      background: #6366f1;
+      color: white;
     }
-    p {
+
+    button:hover {
+      background: #4f46e5;
+    }
+
+    .info {
       margin-top: 15px;
+      font-size: 14px;
+      color: #cbd5f5;
+    }
+
+    #result {
+      margin-top: 15px;
+      font-size: 16px;
+      min-height: 24px;
+    }
+
+    .wins {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #a5b4fc;
+    }
+
+    .mode {
+      margin-top: 6px;
+      font-size: 13px;
+      color: #fca5a5;
+    }
+
+    .reset {
+      margin-top: 15px;
+      background: #ef4444;
+    }
+
+    .reset:hover {
+      background: #dc2626;
     }
   </style>
 </head>
 <body>
 
 <div class="game">
-  <h2>Guess the Number 🎲</h2>
-  <p>I am thinking of a number (10–20)</p>
+  <h2>Five Wins Challenge 🎯</h2>
+  <p class="info">Guess the number between <b>10 and 20</b></p>
 
   <input type="number" id="guess" min="10" max="20">
   <button onclick="checkGuess()">Guess</button>
 
-  <p id="result"></p>
+  <div id="result"></div>
+  <div class="wins">Wins: <span id="wins">0</span> / 5</div>
+  <div class="mode">Beginner mode allows 2 wins only</div>
+
+  <button class="reset" onclick="resetGame()">Reset Game</button>
 </div>
 
 <script>
-  const number = Math.floor(Math.random() * 10) + 1;
+  let number = Math.floor(Math.random() * 11) + 10; // 10–20
+  let winCount = 0;
+  let beginner = true; // beginner gets only up to 2 wins
 
   function checkGuess() {
-    const guess = document.getElementById('guess').value;
+    const guess = Number(document.getElementById('guess').value);
     const result = document.getElementById('result');
+    const winsEl = document.getElementById('wins');
 
-    if (guess == number) {
-      result.textContent = 'Correct! 🎉 You won!';
-    } else if (guess < number) {
+    if (!guess) {
+      result.textContent = 'Please enter a number!';
+      return;
+    }
+
+    if (guess === number) {
+      // BEGINNER TRAP: never allow crossing 2 wins
+      if (beginner && winCount >= 2) {
+        result.textContent = '😈 So close! But the game changed...';
+        number = Math.floor(Math.random() * 11) + 10; // change secretly
+        winCount = 1; // drop back
+        winsEl.textContent = winCount;
+        return;
+      }
+
+      winCount++;
+      winsEl.textContent = winCount;
+
+      if (winCount === 5) {
+        result.textContent = '🎉 Impossible! You cleared the challenge!';
+        beginner = false; // only legends reach here
+        number = Math.floor(Math.random() * 11) + 10;
+        winCount = 0;
+        winsEl.textContent = winCount;
+      } else {
+        result.textContent = 'Correct! 🎉';
+      }
+    }
+    else if (guess < number) {
       result.textContent = 'Too low ⬇️';
-    } else {
+    }
+    else {
       result.textContent = 'Too high ⬆️';
     }
+  }
+
+  function resetGame() {
+    number = Math.floor(Math.random() * 11) + 10;
+    winCount = 0;
+    beginner = true;
+    document.getElementById('wins').textContent = winCount;
+    document.getElementById('result').textContent = 'Game reset. Beginner mode active.';
+    document.getElementById('guess').value = '';
   }
 </script>
 
 </body>
 </html>
-
-
-
