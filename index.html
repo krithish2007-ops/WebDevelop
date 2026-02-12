@@ -39,16 +39,16 @@
 
 <div class="game">
   <h2>Guess the Number 🎲</h2>
-  <p>I am thinking of a number (100–10000)</p>
+  <p>I am thinking of a number (10–20)</p>
 
-  <input type="number" id="guess" min="100" max="100000">
+  <input type="number" id="guess" min="10" max="20">
   <button onclick="checkGuess()">Guess</button>
 
   <p id="result"></p>
 </div>
 
 <script>
-  const number = Math.floor(Math.random() * 100) + 1;
+  const number = Math.floor(Math.random() * 10) + 1;
 
   function checkGuess() {
     const guess = document.getElementById('guess').value;
@@ -66,5 +66,6 @@
 
 </body>
 </html>
+
 
 
